@@ -9,6 +9,9 @@ import userRouter from './routes/userRotes.js';
 import postRouter from './routes/postRoutes.js';
 import storyRouter from './routes/storyRoutes.js';
 import messageRouter from './routes/messageRoutes.js';
+import dns from 'dns'
+
+dns.setServers(["1.1.1.1", '8.8.8.8'] )
 
 const app = express();
 
