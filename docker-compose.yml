@@ -1,0 +1,34 @@
+
+
+services:
+  client:
+    build: ./client
+    container_name: client_service
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+
+  server:
+    build: ./server
+    container_name: server_service
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URL: mongodb://mongo:27017/mern_db
+      IMAGEKIT_PUBLIC_KEY: public_fXHFPk/oxblDmwSZjz2AOC6Xvpo=
+      IMAGEKIT_PRIVATE_KEY: private_fs4CAFLeWUuRJJfDWuEPDYe3az8=
+      IMAGEKIT_URL_ENDPOINT: https://ik.imagekit.io/prasad321
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
