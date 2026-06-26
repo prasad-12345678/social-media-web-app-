@@ -40,11 +40,15 @@ export const sendMessage = async (req, res) => {
 
         res.json({ success: true, message });
 
-        // Send message to to_user_id using SSE
+        // Send message to to_user_id using 
 
         const messageWithUserData = await Message.findById(message._id).populate('from_user_id');
 
         const receiverSocketId = connectedUsers.get(to_user_id);
+
+        console.log("to_user_id:", to_user_id);
+    console.log("receiverSocketId:", receiverSocketId);
+    console.log("connectedUsers:", [...connectedUsers]);
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit(

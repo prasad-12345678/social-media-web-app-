@@ -40,11 +40,21 @@ const App = () => {
   },[user, getToken, dispatch])
 
   useEffect(() => {
-  if (!user) return;
+  console.log("USE EFFECT RUN");
+
+  if (!user) {
+    console.log("User is null");
+    return;
+  }
+
+  console.log("Registering user:", user.id);
+  socket.emit("register", user.id);
 
   socket.off("newMessage");
 
   socket.on("newMessage", (message) => {
+    console.log("MESSAGE RECEIVED:", message);
+
     const senderId =
       typeof message.from_user_id === "object"
         ? message.from_user_id._id
