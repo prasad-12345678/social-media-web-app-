@@ -1,34 +1,8 @@
 import fs from "fs";
 import imagekit from "../configs/imageKit.js";
 import Message from "../models/Message.js";
+import { io, connectedUsers } from "../server.js";
 
-// Create an empty object to store SS Event connections
-const connections = {}; 
-
-// Controller function for the SSE endpoint
-export const sseController = (req, res)=>{
-    const { userId } = req.params
-    console.log('New client connected : ', userId)
-
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    // Add the client's response object to the connections object
-    connections[userId] = res
-
-    // Send an initial event to the client
-    res.write('log: Connected to SSE stream\n\n');
-
-    // Handle client disconnection
-    req.on('close', ()=>{
-        // Remove the client's response object from the connections array
-        delete connections[userId];
-        console.log('Client disconnected');
-    })
-}
 
 // Send Message
 export const sendMessage = async (req, res) => {
@@ -70,8 +44,13 @@ export const sendMessage = async (req, res) => {
 
         const messageWithUserData = await Message.findById(message._id).populate('from_user_id');
 
-        if(connections[to_user_id]){
-           connections[to_user_id].write(`data: ${JSON.stringify(messageWithUserData)}\n\n`)
+        const receiverSocketId = connectedUsers.get(to_user_id);
+
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit(
+            "newMessage",
+            messageWithUserData
+         );
         }
 
     } catch (error) {

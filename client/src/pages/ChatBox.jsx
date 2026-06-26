@@ -7,12 +7,13 @@ import { useAuth } from '@clerk/clerk-react'
 import api from '../api/axios'
 import { addMessage, fetchMessages, resetMessages } from '../features/messages/messagesSlice'
 import toast from 'react-hot-toast'
+import socket from '../socket'
 
 const ChatBox = () => {
 
   const {messages} = useSelector((state)=>state.messages)
   const { userId } = useParams()
-  const { getToken } = useAuth()
+  const { getToken, userId: currentUserId } = useAuth()
   const dispatch = useDispatch()
 
   const [text, setText] = useState('')
@@ -21,6 +22,15 @@ const ChatBox = () => {
   const messagesEndRef = useRef(null)
 
   const connections = useSelector((state) => state.connections.connections)
+
+  /** useEffect(() => {
+  const printToken = async () => {
+    const token = await getToken();
+    console.log(token);
+  }; 
+
+  printToken();
+}, []); */
 
   const fetchUserMessages = async () => {
     try {
@@ -56,6 +66,7 @@ const ChatBox = () => {
     }
   }
 
+
   useEffect(()=>{
     fetchUserMessages()
 
@@ -63,6 +74,20 @@ const ChatBox = () => {
       dispatch(resetMessages())
     }
   },[userId])
+
+  useEffect(() => {
+  if (!currentUserId) return;
+
+  socket.emit("register", currentUserId);
+
+  socket.off("newMessage");
+
+  socket.on("newMessage", (message) => {
+    dispatch(addMessage(message));
+  });
+
+  return () => socket.off("newMessage");
+}, [currentUserId, dispatch]);
 
   useEffect(()=>{
     if(connections.length > 0){
@@ -87,9 +112,19 @@ const ChatBox = () => {
       <div className='p-5 md:px-10 h-full overflow-y-scroll'>
         <div className='space-y-4 max-w-4xl mx-auto'>
           {
-            messages.toSorted((a,b)=> new Date(a.createdAt) - new Date(b.createdAt)).map((message, index)=>(
-              <div key={index} className={`flex flex-col ${message.to_user_id !== user._id ? 'items-start' : 'items-end'}`}>
-                <div className={`p-2 text-sm max-w-sm bg-white text-slate-700 rounded-lg shadow ${message.to_user_id !== user._id ? 'rounded-bl-none' : 'rounded-br-none'}`}>
+           [...messages].sort(
+  (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+).map((message, index)=> {
+
+      const senderId =
+        typeof message.from_user_id === "object"
+          ? message.from_user_id._id
+          : message.from_user_id;
+              return(
+              <div key={index} className={`flex flex-col ${senderId === currentUserId ? 'items-end' : 'items-start'}`}>
+                <div className={`p-2 text-sm max-w-sm bg-white text-slate-700 rounded-lg shadow ${senderId === currentUserId
+  ? 'rounded-br-none'
+  : 'rounded-bl-none'}`}>
                   {
                   message.message_type === 'image' && <img src={message.media_url} className='w-full max-w-sm rounded-lg mb-1' alt="" />
                   }
@@ -97,7 +132,7 @@ const ChatBox = () => {
                 </div>
 
               </div>
-            ))
+            ) })
           }
           <div ref={messagesEndRef} />
         </div>

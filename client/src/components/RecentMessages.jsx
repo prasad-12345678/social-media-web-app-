@@ -5,6 +5,7 @@ import moment from 'moment'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import api from '../api/axios'
 import toast from 'react-hot-toast'
+import socket from '../socket'
 
 const RecentMessages = () => {
 
@@ -41,11 +42,19 @@ const RecentMessages = () => {
     }
 
     useEffect(()=>{
-        if(user){
-            fetchRecentMessages()
-            setInterval(fetchRecentMessages, 30000)
-            return ()=> {clearInterval()}
-        }
+        if (!user) return;
+
+    fetchRecentMessages();
+
+    socket.off("newMessage");
+
+    socket.on("newMessage", () => {
+        fetchRecentMessages();
+    });
+
+    return () => {
+        socket.off("newMessage");
+    };
         
     },[user])
 
@@ -54,12 +63,22 @@ const RecentMessages = () => {
       <h3 className='font-semibold text-slate-8 mb-4'>Recent Messages</h3>
       <div className='flex flex-col max-h-56 overflow-y-scroll no-scrollbar'>
         {
-            messages.map((message, index)=>(
-                <Link to={`/messages/${message.from_user_id._id}`} key={index} className='flex items-start gap-2 py-2 hover:bg-slate-100'>
-                    <img src={message.from_user_id.profile_picture} alt="" className='w-8 h-8 rounded-full'/>
+            messages.map((message, index)=>{const senderId =
+    typeof message.from_user_id === "object"
+      ? message.from_user_id._id
+      : message.from_user_id;
+      
+      const sender =
+        typeof message.from_user_id === "object"
+            ? message.from_user_id
+            : null; 
+      
+      return(
+                <Link to={`/messages/${senderId}`} key={index} className='flex items-start gap-2 py-2 hover:bg-slate-100'>
+                    <img src={sender?.profile_picture || ""} alt="" className='w-8 h-8 rounded-full'/>
                     <div className='w-full'>
                         <div className='flex justify-between'>
-                            <p className='font-medium'>{message.from_user_id.full_name}</p>
+                            <p className='font-medium'>{sender?.full_name}</p>
                             <p className='text-[10px] text-slate-400'>{moment(message.createdAt).fromNow()}</p>
                         </div>
                         <div className='flex justify-between'>
@@ -69,7 +88,7 @@ const RecentMessages = () => {
                     </div>
                     
                 </Link>
-            ))
+            )})
         }
       </div>
     </div>

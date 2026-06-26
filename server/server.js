@@ -10,10 +10,13 @@ import postRouter from './routes/postRoutes.js';
 import storyRouter from './routes/storyRoutes.js';
 import messageRouter from './routes/messageRoutes.js';
 import dns from 'dns'
+import http from "http";
+import { Server } from "socket.io";
 
 dns.setServers(["1.1.1.1", '8.8.8.8'] )
 
 const app = express();
+const server = http.createServer(app);
 
 await connectDB();
 
@@ -28,6 +31,33 @@ app.use('/api/post', postRouter)
 app.use('/api/story', storyRouter)
 app.use('/api/message', messageRouter)
 
+export const connectedUsers = new Map();
+
+export const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("register", (userId) => {
+    connectedUsers.set(userId, socket.id);
+    console.log("Registered:", userId);
+  });
+
+  socket.on("disconnect", () => {
+    for (const [userId, socketId] of connectedUsers) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        break;
+      }
+    }
+    console.log("Disconnected");
+  });
+});
+
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, ()=> console.log(`Server is running on port ${PORT}`))
+server.listen(PORT, ()=> console.log(`Server is running on port ${PORT}`))

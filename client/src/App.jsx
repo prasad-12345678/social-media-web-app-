@@ -17,6 +17,7 @@ import { fetchUser } from './features/user/userSlice'
 import { fetchConnections } from './features/connections/connectionsSlice'
 import { addMessage } from './features/messages/messagesSlice'
 import Notification from './components/Notification'
+import socket from "./socket";
 
 const App = () => {
   const {user} = useUser()
@@ -38,30 +39,31 @@ const App = () => {
     
   },[user, getToken, dispatch])
 
-  useEffect(()=>{
-    pathnameRef.current = pathname
-  },[pathname])
+  useEffect(() => {
+  if (!user) return;
 
-  useEffect(()=>{
-    if(user){
-      const eventSource = new EventSource(import.meta.env.VITE_BASEURL + '/api/message/' + user.id);
+  socket.off("newMessage");
 
-      eventSource.onmessage = (event)=>{
-        const message = JSON.parse(event.data)
+  socket.on("newMessage", (message) => {
+    const senderId =
+      typeof message.from_user_id === "object"
+        ? message.from_user_id._id
+        : message.from_user_id;
 
-        if(pathnameRef.current === ('/messages/' + message.from_user_id._id)){
-          dispatch(addMessage(message))
-        }else{
-          toast.custom((t)=>(
-            <Notification t={t} message={message}/>
-          ), {position: "bottom-right"})
-        }
-      }
-      return ()=>{
-        eventSource.close()
-      }
+    if (pathnameRef.current === "/messages/" + senderId) {
+      dispatch(addMessage(message));
+    } else {
+      toast.custom(
+        (t) => <Notification t={t} message={message} />,
+        { position: "bottom-right" }
+      );
     }
-  },[user, dispatch])
+  });
+
+  return () => {
+    socket.off("newMessage");
+  };
+}, [user, dispatch]);
   
   return (
     <>
