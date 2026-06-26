@@ -78,7 +78,7 @@ const ChatBox = () => {
   useEffect(() => {
   if (!currentUserId) return;
 
-  socket.emit("register", currentUserId);
+
 
   socket.off("newMessage");
 
