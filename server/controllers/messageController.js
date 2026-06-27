@@ -46,9 +46,9 @@ export const sendMessage = async (req, res) => {
 
         const receiverSocketId = connectedUsers.get(to_user_id);
 
-        console.log("to_user_id:", to_user_id);
+        /** console.log("to_user_id:", to_user_id);
     console.log("receiverSocketId:", receiverSocketId);
-    console.log("connectedUsers:", [...connectedUsers]);
+    console.log("connectedUsers:", [...connectedUsers]); */
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit(
